@@ -23,8 +23,8 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Iterable, Sequence
 
-import fitz  # PyMuPDF
 import pdfplumber
+import pymupdf
 
 from app.services.config_store import FieldSpec
 
@@ -137,7 +137,7 @@ def extract_acroform(path: str | Path) -> tuple[dict[str, str], dict[str, int]]:
 
     values: dict[str, str] = {}
     pages: dict[str, int] = {}
-    with fitz.open(str(path)) as doc:
+    with pymupdf.open(str(path)) as doc:
         for page_index, page in enumerate(doc, start=1):
             for widget in page.widgets() or []:
                 name = (widget.field_name or "").strip()
@@ -153,7 +153,7 @@ def extract_acroform(path: str | Path) -> tuple[dict[str, str], dict[str, int]]:
 
 
 def has_widgets(path: str | Path) -> bool:
-    with fitz.open(str(path)) as doc:
+    with pymupdf.open(str(path)) as doc:
         for page in doc:
             if page.first_widget is not None:
                 return True
@@ -333,7 +333,7 @@ def extract(path: str | Path, specs: Iterable[FieldSpec]) -> ExtractionResult:
     wanted = list(specs)
     result = ExtractionResult()
 
-    with fitz.open(str(path)) as doc:
+    with pymupdf.open(str(path)) as doc:
         result.page_count = doc.page_count
 
     ran_acroform = False
@@ -404,7 +404,7 @@ def probe(path: str | Path) -> ProbeResult:
     """
 
     widgets: list[ProbeWidget] = []
-    with fitz.open(str(path)) as doc:
+    with pymupdf.open(str(path)) as doc:
         page_count = doc.page_count
         for page_index, page in enumerate(doc, start=1):
             for widget in page.widgets() or []:

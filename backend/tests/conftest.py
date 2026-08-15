@@ -14,7 +14,7 @@ from __future__ import annotations
 import datetime as dt
 from pathlib import Path
 
-import fitz
+import pymupdf
 import pytest
 
 TODAY = dt.date.today()
@@ -127,7 +127,7 @@ def build_flattened_contract(
     if values:
         data.update(values)
 
-    doc = fitz.open()
+    doc = pymupdf.open()
     for page_no, rows in enumerate(PAGE_LAYOUT):
         page = doc.new_page(width=612, height=792)
         page.insert_text((LABEL_X, 80), HEADINGS[page_no], fontsize=13, fontname="helv")
@@ -169,7 +169,7 @@ def build_fillable_contract(
     if values:
         data.update(values)
 
-    doc = fitz.open()
+    doc = pymupdf.open()
     for page_no, rows in enumerate(PAGE_LAYOUT):
         page = doc.new_page(width=612, height=792)
         page.insert_text((LABEL_X, 80), HEADINGS[page_no], fontsize=13, fontname="helv")
@@ -177,10 +177,10 @@ def build_fillable_contract(
         y = FIRST_Y
         for label, key in rows:
             page.insert_text((LABEL_X, y), f"{label}:", fontsize=10, fontname="helv")
-            widget = fitz.Widget()
+            widget = pymupdf.Widget()
             widget.field_name = key
-            widget.field_type = fitz.PDF_WIDGET_TYPE_TEXT
-            widget.rect = fitz.Rect(VALUE_X, y - 11, VALUE_X + 250, y + 5)
+            widget.field_type = pymupdf.PDF_WIDGET_TYPE_TEXT
+            widget.rect = pymupdf.Rect(VALUE_X, y - 11, VALUE_X + 250, y + 5)
             widget.field_value = data.get(key, "")
             widget.text_fontsize = 10
             page.add_widget(widget)
@@ -196,10 +196,10 @@ def build_fillable_contract(
                 )
             if carrier_fields:
                 for offset, name in enumerate(("carrier_name", "carrier_rep_title")):
-                    widget = fitz.Widget()
+                    widget = pymupdf.Widget()
                     widget.field_name = name
-                    widget.field_type = fitz.PDF_WIDGET_TYPE_TEXT
-                    widget.rect = fitz.Rect(
+                    widget.field_type = pymupdf.PDF_WIDGET_TYPE_TEXT
+                    widget.rect = pymupdf.Rect(
                         320, y + 30 + offset * 24, 560, y + 46 + offset * 24
                     )
                     widget.field_value = ""
@@ -214,9 +214,9 @@ def build_fillable_contract(
 def build_signature_png(path: Path) -> Path:
     """A stand-in for the carrier representative's signature image."""
 
-    pixmap = fitz.Pixmap(fitz.csRGB, fitz.IRect(0, 0, 300, 80), False)
+    pixmap = pymupdf.Pixmap(pymupdf.csRGB, pymupdf.IRect(0, 0, 300, 80), False)
     pixmap.set_rect(pixmap.irect, (255, 255, 255))
-    pixmap.set_rect(fitz.IRect(10, 34, 290, 40), (20, 20, 90))
+    pixmap.set_rect(pymupdf.IRect(10, 34, 290, 40), (20, 20, 90))
     pixmap.save(str(path))
     return path
 

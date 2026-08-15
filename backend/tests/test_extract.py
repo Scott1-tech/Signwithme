@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-import fitz
+import pymupdf
 import pytest
 
 from app.services.config_store import FieldSpec, default_field_specs
@@ -48,7 +48,7 @@ def test_mixed_falls_back_to_text_for_missing_widgets(tmp_path: Path) -> None:
     """A form with widgets for some fields and painted text for the rest."""
 
     path = build_fillable_contract(tmp_path / "mixed.pdf")
-    doc = fitz.open(str(path))
+    doc = pymupdf.open(str(path))
     # Drop the SSN widget and paint the answer on instead, the way a
     # partially flattened envelope arrives.
     for page in doc:
@@ -125,7 +125,7 @@ def test_value_stops_at_the_next_column(tmp_path: Path) -> None:
     """Two label/value pairs on one line must not bleed into each other."""
 
     path = tmp_path / "columns.pdf"
-    doc = fitz.open()
+    doc = pymupdf.open()
     page = doc.new_page(width=612, height=792)
     page.insert_text((60, 120), "Date of Birth:", fontsize=10, fontname="helv")
     page.insert_text((160, 120), "01/02/1980", fontsize=10, fontname="helv")
@@ -143,7 +143,7 @@ def test_value_stops_at_the_next_column(tmp_path: Path) -> None:
 
 def test_label_match_ignores_case_and_punctuation(tmp_path: Path) -> None:
     path = tmp_path / "punct.pdf"
-    doc = fitz.open()
+    doc = pymupdf.open()
     page = doc.new_page()
     page.insert_text((60, 120), "DATE OF BIRTH.:", fontsize=10, fontname="helv")
     page.insert_text((200, 120), "01/02/1980", fontsize=10, fontname="helv")
@@ -164,7 +164,7 @@ def test_max_gap_stops_the_search(tmp_path: Path) -> None:
     """A value parked far to the right belongs to something else."""
 
     path = tmp_path / "gap.pdf"
-    doc = fitz.open()
+    doc = pymupdf.open()
     page = doc.new_page(width=612, height=792)
     page.insert_text((60, 120), "Email:", fontsize=10, fontname="helv")
     page.insert_text((500, 120), "far@example.com", fontsize=10, fontname="helv")
