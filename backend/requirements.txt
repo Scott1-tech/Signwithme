@@ -1,0 +1,27 @@
+# Driver Contract Review Desk — backend dependencies
+# Pinned. This is a compliance tool; a surprise minor bump in the PDF
+# toolchain can silently change extraction results.
+
+# --- Web ---
+fastapi==0.141.1
+uvicorn[standard]==0.52.3
+python-multipart==0.0.32
+
+# --- Validation / settings ---
+pydantic==2.13.4
+pydantic-settings==2.15.0
+
+# --- Database ---
+SQLAlchemy==2.0.52
+
+# --- PDF ---
+# PyMuPDF: AcroForm widgets, signature stamping, page rendering.
+PyMuPDF==1.28.2
+# pdfplumber: word-level coordinates for label-anchored extraction.
+pdfplumber==0.11.10
+# Pillow: signature image validation.
+pillow==12.3.0
+
+# --- Tests ---
+pytest==9.1.1
+httpx==0.28.1

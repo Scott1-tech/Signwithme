@@ -1,0 +1,43 @@
+# --- Driver data: never commit ---
+# Real contracts contain Social Security numbers.
+backend/storage/
+*.pdf
+!backend/tests/**/*.pdf
+
+# --- Python ---
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+*.egg-info/
+.coverage
+htmlcov/
+
+# --- Database ---
+*.db
+*.sqlite
+*.sqlite3
+
+# --- Environment ---
+.env
+.env.local
+
+# --- Node / Next.js ---
+node_modules/
+.next/
+out/
+build/
+dist/
+.turbo/
+*.tsbuildinfo
+npm-debug.log*
+yarn-error.log*
+
+# --- Editors / OS ---
+.DS_Store
+.idea/
+.vscode/
+*.swp
