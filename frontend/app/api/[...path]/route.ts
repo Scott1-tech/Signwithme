@@ -49,8 +49,59 @@ function backendUrl(): string {
   return (process.env.BACKEND_URL ?? DEFAULT_BACKEND).replace(/\/+$/, "");
 }
 
+/** The host this request arrived on, as the browser addressed it. */
+function ownHost(request: NextRequest): string {
+  return (
+    request.headers.get("x-forwarded-host") ??
+    request.headers.get("host") ??
+    ""
+  ).toLowerCase();
+}
+
+/**
+ * Catch a BACKEND_URL that cannot work, before using it.
+ *
+ * The dangerous one is a backend address pointing back at this same
+ * service: /api/* would forward to /api/* on the same host and recurse
+ * until the platform kills it with a 508. Cheap to detect, and impossible
+ * to diagnose from the 508 alone.
+ */
+function configurationProblem(request: NextRequest, backend: string): string | null {
+  let parsed: URL;
+  try {
+    parsed = new URL(backend);
+  } catch {
+    return (
+      `BACKEND_URL is not a valid URL: “${backend}”. It should look like ` +
+      "https://your-backend.example.com, with no path and no trailing slash."
+    );
+  }
+
+  if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
+    return `BACKEND_URL must start with http:// or https://, but is “${backend}”.`;
+  }
+
+  const host = ownHost(request);
+  if (host && parsed.host.toLowerCase() === host) {
+    return (
+      `BACKEND_URL points at ${parsed.host}, which is this same service. ` +
+      "The frontend would forward /api to itself and loop. Set it to the " +
+      "backend service's address instead."
+    );
+  }
+
+  return null;
+}
+
 async function proxy(request: NextRequest, path: string[]): Promise<Response> {
   const backend = backendUrl();
+
+  const problem = configurationProblem(request, backend);
+  if (problem) {
+    console.error(`[contract-desk] ${problem}`);
+    return Response.json({ detail: problem }, { status: 502 });
+  }
+
   const target = `${backend}/api/${path.join("/")}${request.nextUrl.search}`;
 
   const headers = new Headers(request.headers);
