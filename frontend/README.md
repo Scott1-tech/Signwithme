@@ -22,6 +22,17 @@ Then open <http://localhost:3000>. The backend must be running on
 origin and there is no CORS preflight. Point it somewhere else with
 `BACKEND_URL` if you need to.
 
+> **`BACKEND_URL` is read at build time, not at run time.** Next resolves
+> rewrites during `next build` and writes the destination into
+> `.next/routes-manifest.json`, so `next start` never re-reads it. Setting or
+> changing the variable therefore requires a **rebuild**, not just a restart.
+> Restart only, and the frontend keeps proxying to the old target — which,
+> if the variable was never set, is `127.0.0.1:8000` inside the frontend's
+> own container, giving `ECONNREFUSED` and a 500 on every API call.
+>
+> The resolved target is printed during the build: look for
+> `[contract-desk] proxying /api to …`.
+
 ```bash
 npm run typecheck   # tsc --noEmit, strict mode
 npm run lint
