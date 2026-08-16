@@ -75,10 +75,33 @@ npm run typecheck
 
 Update this section as work progresses.
 
-- [ ] Extraction service
-- [ ] Rules engine and tests
-- [ ] Models and database
-- [ ] Stamping service
-- [ ] API routes
-- [ ] Frontend queue and detail
-- [ ] Frontend settings and audit
+- [x] Extraction service
+- [x] Rules engine and tests
+- [x] Models and database
+- [x] Stamping service
+- [x] API routes
+- [x] Frontend queue and detail
+- [x] Frontend settings and audit
+
+Version one is built and runs end to end: upload, extract, validate, driver
+note, approve, stamp, download, audit. 217 backend tests pass; the frontend
+typechecks under strict mode and builds.
+
+Three gaps in specification section 6 and 8 were closed rather than worked
+around. They are listed at the end of `README.md` and explained in
+`backend/README.md`: the `cdl.expiry_unreadable` rule, a void route, and a
+warning-dismissal route.
+
+### Still to do before this is used on real contracts
+
+1. **Correct the field map against a real signed contract.** The shipped
+   anchors are a guess at the wording. Run a real PDF through the probe tool
+   on the settings screen and fix them — this is day one of the build plan
+   and answers open questions 1 to 3 in the specification.
+2. **Configure the signature.** Upload the PNG, check the red placement box
+   sits right, and confirm the anchor phrase is identical on every signature
+   page (open question 4).
+3. **Set `SSN_SALT`** in `backend/.env` to a real generated value. Changing
+   it later orphans every existing hash.
+4. **Process the twenty real contracts** the success criteria call for, and
+   confirm zero false "clean" results.
