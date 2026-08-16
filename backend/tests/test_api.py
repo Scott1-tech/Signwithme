@@ -100,6 +100,22 @@ def test_health(client: TestClient) -> None:
     assert client.get("/api/health").json() == {"status": "ok"}
 
 
+def test_the_root_redirects_to_the_api_docs(client: TestClient) -> None:
+    """A bare / used to 404, which reads as a broken deployment."""
+
+    response = client.get("/", follow_redirects=False)
+    assert response.status_code == 307
+    assert response.headers["location"] == "/docs"
+
+    assert client.get("/docs").status_code == 200
+
+
+def test_a_head_request_to_the_root_does_not_404(client: TestClient) -> None:
+    """Uptime checks and platform health probes use HEAD /."""
+
+    assert client.head("/", follow_redirects=False).status_code == 307
+
+
 def test_upload_returns_the_full_detail_object(
     client: TestClient, clean_pdf: Path
 ) -> None:

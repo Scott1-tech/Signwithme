@@ -11,6 +11,7 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import RedirectResponse
 
 from app.api import audit, config_routes, contracts
 from app.config import get_settings
@@ -58,6 +59,20 @@ def create_app() -> FastAPI:
     @app.get("/api/health", tags=["health"])
     def health() -> dict[str, str]:
         return {"status": "ok"}
+
+    # HEAD as well as GET: platform health probes and uptime checkers send
+    # HEAD /, and FastAPI — unlike plain Starlette — does not add it for you.
+    @app.api_route("/", methods=["GET", "HEAD"], include_in_schema=False)
+    def root() -> RedirectResponse:
+        """Send the root to the API docs.
+
+        Every route lives under /api, so a bare / used to be a bare 404 —
+        which reads as "the deployment is broken" when it is actually
+        working. The reviewer's interface is the separate frontend app;
+        anyone landing here wants the API.
+        """
+
+        return RedirectResponse(url="/docs")
 
     return app
 
