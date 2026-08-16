@@ -18,20 +18,22 @@ npm run dev
 Then open <http://localhost:3000>. The backend must be running on
 `127.0.0.1:8000` — see `backend/README.md`.
 
-`next.config.ts` rewrites `/api/*` to the backend, so the browser stays on one
-origin and there is no CORS preflight. Point it somewhere else with
-`BACKEND_URL` if you need to.
+`/api/*` is proxied to the backend, so the browser stays on one origin and
+there is no CORS preflight. Set `BACKEND_URL` to point it somewhere else;
+it defaults to `http://127.0.0.1:8000`.
 
-> **`BACKEND_URL` is read at build time, not at run time.** Next resolves
-> rewrites during `next build` and writes the destination into
-> `.next/routes-manifest.json`, so `next start` never re-reads it. Setting or
-> changing the variable therefore requires a **rebuild**, not just a restart.
-> Restart only, and the frontend keeps proxying to the old target — which,
-> if the variable was never set, is `127.0.0.1:8000` inside the frontend's
-> own container, giving `ECONNREFUSED` and a 500 on every API call.
->
-> The resolved target is printed during the build: look for
-> `[contract-desk] proxying /api to …`.
+The proxy is a route handler at `app/api/[...path]/route.ts`, not a
+`rewrites()` entry in `next.config.ts`, and that is deliberate. Next resolves
+rewrites during `next build` and freezes the destination into
+`.next/routes-manifest.json`, which makes `BACKEND_URL` a build-time
+variable: set it and restart, and nothing changes, because the old target is
+baked into the artifact. Reading it per request means it behaves like every
+other setting — change it, restart, done.
+
+The handler streams bodies both ways rather than buffering them, since
+uploads run to 50 MB and responses include rendered page images and the
+executed PDF. When the backend cannot be reached it returns a 502 with a
+message naming the address it tried.
 
 ```bash
 npm run typecheck   # tsc --noEmit, strict mode
