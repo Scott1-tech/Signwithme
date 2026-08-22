@@ -32,6 +32,7 @@ CSV_COLUMNS = [
     "pages_stamped",
     "signature_hash",
     "ip_address",
+    "signed_in_as",
 ]
 
 
@@ -60,6 +61,7 @@ def _to_entry(approval: Approval, contract: Contract | None) -> AuditEntry:
         pages_stamped=list(approval.pages_stamped or []),
         signature_hash=approval.signature_hash,
         ip_address=approval.ip_address,
+        signed_in_as=approval.signed_in_as,
     )
 
 
@@ -104,6 +106,7 @@ def export_audit(session: Session = Depends(get_db)) -> StreamingResponse:
                 "pages_stamped": " ".join(str(p) for p in entry.pages_stamped),
                 "signature_hash": entry.signature_hash or "",
                 "ip_address": entry.ip_address or "",
+                "signed_in_as": entry.signed_in_as or "",
             }
         )
 

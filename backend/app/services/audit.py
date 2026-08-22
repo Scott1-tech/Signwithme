@@ -48,6 +48,7 @@ def record_approval(
     pages_stamped: Sequence[int],
     signature_hash: str | None,
     ip_address: str | None,
+    signed_in_as: str | None = None,
 ) -> Approval:
     """Write the approval record. Never updated, never deleted."""
 
@@ -60,6 +61,7 @@ def record_approval(
         pages_stamped=list(pages_stamped),
         signature_hash=signature_hash,
         ip_address=ip_address,
+        signed_in_as=signed_in_as,
     )
     session.add(approval)
     session.flush()
@@ -78,6 +80,7 @@ def record_approval(
             "pages_stamped": list(pages_stamped),
             "signature_hash": signature_hash,
             "ip_address": ip_address,
+            "signed_in_as": signed_in_as,
         }
     )
     logger.info(

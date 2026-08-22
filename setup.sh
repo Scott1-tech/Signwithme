@@ -66,7 +66,30 @@ npm install --no-audit --no-fund --silent
 npm run build
 cd ..
 
+# --- 5. An account, if this desk will be reached from elsewhere ------------
+say "Who will use this?"
+cd backend
+if ./.venv/bin/python -m app.cli list-users 2>/dev/null | grep -q "No accounts"; then
+  echo "  With no account the desk runs without a login, on this machine"
+  echo "  only. That is the right setting if nobody else needs to open it."
+  echo
+  printf "  Create an account so it can be opened from elsewhere? [y/N] "
+  read -r answer </dev/tty || answer="n"
+  if [ "${answer:-n}" = "y" ] || [ "${answer:-n}" = "Y" ]; then
+    echo
+    ./.venv/bin/python -m app.cli create-user || true
+  else
+    echo "  Skipped. Add one later with:"
+    echo "      cd backend && ./.venv/bin/python -m app.cli create-user"
+  fi
+else
+  echo "  Accounts already exist. Manage them with:"
+  echo "      cd backend && ./.venv/bin/python -m app.cli list-users"
+fi
+cd ..
+
 say "Setup finished."
 echo
 echo "  Start the app by running:  ./start.sh"
+echo "  To open it from another device:  ./start-shared.sh"
 echo

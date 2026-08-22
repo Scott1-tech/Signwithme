@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { Toaster } from "sonner";
 
+import { AuthGate } from "@/components/auth/auth-gate";
 import { SiteNav } from "@/components/site-nav";
 import { Providers } from "@/app/providers";
 import "./globals.css";
@@ -31,7 +32,9 @@ export default function RootLayout({
         <Providers>
           <div className="min-h-screen">
             <SiteNav />
-            <main className="mx-auto max-w-[1400px] px-4 py-6">{children}</main>
+            <main className="mx-auto max-w-[1400px] px-4 py-6">
+              <AuthGate>{children}</AuthGate>
+            </main>
           </div>
           <Toaster position="bottom-right" closeButton richColors />
         </Providers>

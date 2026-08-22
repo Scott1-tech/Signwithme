@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
+import { AccountMenu } from "@/components/auth/account-menu";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { cn } from "@/lib/utils";
 
@@ -17,6 +18,8 @@ const LINKS = [
 
 export function SiteNav() {
   const pathname = usePathname();
+  // Nothing to navigate to until you are signed in.
+  const signedOut = pathname === "/login";
 
   return (
     <header className="border-b border-border bg-background">
@@ -26,7 +29,7 @@ export function SiteNav() {
         </Link>
 
         <nav aria-label="Main" className="flex items-center gap-1">
-          {LINKS.map((link) => {
+          {(signedOut ? [] : LINKS).map((link) => {
             const active =
               link.href === "/"
                 ? pathname === "/" || pathname.startsWith("/contracts")
@@ -50,9 +53,10 @@ export function SiteNav() {
         </nav>
 
         <div className="ml-auto flex items-center gap-2">
-          <span className="hidden text-xs text-muted-foreground sm:inline">
+          <span className="hidden text-xs text-muted-foreground lg:inline">
             Local only · no driver data leaves this machine
           </span>
+          {!signedOut && <AccountMenu />}
           <ThemeToggle />
         </div>
       </div>

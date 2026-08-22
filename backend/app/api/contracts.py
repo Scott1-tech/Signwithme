@@ -11,6 +11,7 @@ from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session
 
 from app.config import get_settings
+from app.api.auth import require_auth
 from app.database import get_db
 from app.models import (
     Approval,
@@ -19,6 +20,7 @@ from app.models import (
     ExtractedField,
     SignatureAsset,
     Template,
+    User,
 )
 from app.models import Flag as FlagRow
 from app.models import Severity
@@ -574,6 +576,7 @@ def approve(
     body: ApproveRequest,
     request: Request,
     session: Session = Depends(get_db),
+    signed_in: User | None = Depends(require_auth),
 ) -> ContractDetail:
     """Record the human authorisation behind the signature stamp.
 
@@ -621,6 +624,9 @@ def approve(
         pages_stamped=_planned_pages(contract),
         signature_hash=hash_file(signature) if signature else None,
         ip_address=request.client.host if request.client else None,
+        # The account, recorded beside the typed name rather than instead
+        # of it. The typed name is what the reviewer attested to.
+        signed_in_as=signed_in.username if signed_in else None,
     )
 
     contract.status = ContractStatus.APPROVED

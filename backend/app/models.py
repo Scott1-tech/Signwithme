@@ -210,6 +210,9 @@ class Approval(Base):
     pages_stamped: Mapped[Any] = mapped_column(JSON, default=list)
     signature_hash: Mapped[str | None] = mapped_column(String(64), nullable=True)
     ip_address: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    #: The account that was signed in. Recorded beside approved_by, never
+    #: instead of it: the typed name is what the reviewer attested to.
+    signed_in_as: Mapped[str | None] = mapped_column(String(64), nullable=True)
 
     contract: Mapped[Contract] = relationship(back_populates="approvals")
 
@@ -315,3 +318,52 @@ class TemplateMark(Base):
     ordinal: Mapped[int] = mapped_column(Integer, default=0)
 
     template: Mapped[Template] = relationship(back_populates="marks")
+
+
+class User(Base):
+    """Someone allowed to use the desk.
+
+    Accounts exist so the app can be reached from somewhere other than the
+    machine it runs on. Nothing here weakens the approve step: the reviewer
+    still types their name every time, and the account is recorded beside
+    it rather than instead of it.
+    """
+
+    __tablename__ = "users"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
+    username: Mapped[str] = mapped_column(String(64), unique=True, index=True)
+    display_name: Mapped[str] = mapped_column(String(128), default="")
+    #: scrypt, encoded as scrypt$n$r$p$salt$hash. See app.services.auth.
+    password_hash: Mapped[str] = mapped_column(String(256))
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+    created_at: Mapped[dt.datetime] = mapped_column(DateTime, default=utcnow)
+    last_login_at: Mapped[dt.datetime | None] = mapped_column(DateTime, nullable=True)
+
+    @property
+    def label(self) -> str:
+        return self.display_name or self.username
+
+
+class Session(Base):
+    """One signed-in browser.
+
+    Sessions are rows rather than signed cookies so that signing out, or
+    removing an account, takes effect immediately instead of waiting for a
+    token to expire.
+    """
+
+    __tablename__ = "sessions"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
+    #: SHA-256 of the cookie value. The cookie itself is never stored, so a
+    #: copy of the database does not hand over live sessions.
+    token_hash: Mapped[str] = mapped_column(String(64), unique=True, index=True)
+    user_id: Mapped[str] = mapped_column(
+        String(36), ForeignKey("users.id", ondelete="CASCADE"), index=True
+    )
+    created_at: Mapped[dt.datetime] = mapped_column(DateTime, default=utcnow)
+    expires_at: Mapped[dt.datetime] = mapped_column(DateTime)
+    ip_address: Mapped[str | None] = mapped_column(String(64), nullable=True)
+
+    user: Mapped[User] = relationship(lazy="joined")

@@ -62,6 +62,8 @@ export interface Approval {
   pages_stamped: number[];
   signature_hash: string | null;
   ip_address: string | null;
+  /** The account signed in at the time, when the desk has accounts. */
+  signed_in_as: string | null;
 }
 
 export interface ContractListItem {
@@ -212,6 +214,7 @@ export interface AuditEntry {
   pages_stamped: number[];
   signature_hash: string | null;
   ip_address: string | null;
+  signed_in_as: string | null;
 }
 
 export interface AuditPage {
@@ -315,4 +318,25 @@ export interface UploadOptions {
   signatureId?: string;
   /** ISO date, as an HTML date input produces. */
   signDate?: string;
+}
+
+/* --- Accounts --- */
+
+export interface AuthUser {
+  username: string;
+  display_name: string;
+  /** Display name if there is one, otherwise the username. */
+  label: string;
+}
+
+export interface AuthStatus {
+  /** False while the desk has no accounts — the single-machine default. */
+  login_required: boolean;
+  signed_in: boolean;
+  user: AuthUser | null;
+}
+
+export interface LoginBody {
+  username: string;
+  password: string;
 }

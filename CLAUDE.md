@@ -21,8 +21,11 @@ These are not preferences. Changing any of them changes what the product is.
 1. **No AI or LLM in the decision path.** Every validation is a deterministic
    rule. A hallucinated "looks fine" on a compliance document is worse than no
    check at all.
-2. **Local only.** Bind to `127.0.0.1`. Driver Social Security numbers are in
-   these files and must not cross a network.
+2. **Local only by default.** `127.0.0.1` unless someone deliberately shares
+   the desk, and sharing requires an account: `app.main.check_exposure`
+   refuses to start on a non-loopback host while no user exists. Driver
+   Social Security numbers are in these files; they never reach a network
+   without a login in front of them.
 3. **Never persist a full SSN.** Last four plus a salted hash. The full value
    lives only inside the PDF on disk.
 4. **Never log field values.** Field keys and rule ids only.
@@ -84,6 +87,7 @@ Update this section as work progresses.
 - [x] Frontend settings and audit
 - [x] Placement templates learned from completed contracts
 - [x] Signature library, and choosing template/signature/date at upload
+- [x] Accounts, sessions, and the guard against unauthenticated exposure
 
 Version one is built and runs end to end: upload, extract, validate, driver
 note, approve, stamp, download, audit. 217 backend tests pass; the frontend

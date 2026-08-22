@@ -34,6 +34,9 @@ class Settings(BaseSettings):
     host: str = "127.0.0.1"
     port: int = 8000
     cors_origins: str = "http://localhost:3000,http://127.0.0.1:3000"
+    #: Only turn on behind HTTPS. On a private network the desk is served
+    #: over plain HTTP and a secure-only cookie would never be sent.
+    session_cookie_secure: bool = False
 
     # --- Storage ---
     storage_root: Path = Path("storage")
@@ -51,6 +54,12 @@ class Settings(BaseSettings):
     @classmethod
     def _absolutise(cls, value: Path) -> Path:
         return value if value.is_absolute() else (BACKEND_ROOT / value)
+
+    @property
+    def is_loopback(self) -> bool:
+        """Is the app answering only to the machine it runs on?"""
+
+        return self.host in {"127.0.0.1", "localhost", "::1"}
 
     @property
     def cors_origin_list(self) -> list[str]:

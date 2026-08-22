@@ -8,6 +8,8 @@
 
 import type {
   ApproveBody,
+  AuthStatus,
+  LoginBody,
   SignatureAsset,
   Template,
   TemplateListItem,
@@ -95,7 +97,21 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
       "Could not reach the backend. Is it running on 127.0.0.1:8000?",
     );
   }
-  if (!response.ok) throw await toApiError(response);
+  if (!response.ok) {
+    // A session that expired mid-shift should land on the login page
+    // rather than surfacing as an unexplained failure on every screen.
+    // Auth routes are exempt: /auth/login must be free to report a bad
+    // password without bouncing the page.
+    if (
+      response.status === 401 &&
+      typeof window !== "undefined" &&
+      !path.startsWith("/auth") &&
+      window.location.pathname !== "/login"
+    ) {
+      window.location.assign("/login");
+    }
+    throw await toApiError(response);
+  }
   if (response.status === 204) return undefined as T;
 
   const type = response.headers.get("content-type") ?? "";
@@ -402,6 +418,27 @@ export const templatesApi = {
 
   remove(id: string): Promise<void> {
     return request<void>(`/templates/${id}`, { method: "DELETE" });
+  },
+};
+
+/* --- Accounts --- */
+
+export const authApi = {
+  /** Whether this desk needs a login, and whether this browser has one. */
+  status(): Promise<AuthStatus> {
+    return request<AuthStatus>("/auth/status");
+  },
+
+  login(body: LoginBody): Promise<AuthStatus> {
+    return request<AuthStatus>("/auth/login", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+  },
+
+  logout(): Promise<AuthStatus> {
+    return request<AuthStatus>("/auth/logout", { method: "POST" });
   },
 };
 

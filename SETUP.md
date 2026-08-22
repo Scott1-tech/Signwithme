@@ -106,6 +106,18 @@ It goes to **Completed**, and the approval is recorded in the **Audit log**.
 
 ---
 
+## Opening it from another computer or phone
+
+By default the desk answers only to the machine it runs on. To reach it from
+elsewhere — another desk, home, a phone — see [`ACCESS.md`](ACCESS.md).
+
+The short version: create an account first, then start it with
+`start-shared.bat` / `./start-shared.sh` instead of the usual one. The app
+will not face a network without a login, and says so rather than starting
+unprotected.
+
+---
+
 ## Back it up
 
 Executed contracts must be kept — 49 CFR 391.51 — and one computer is not a

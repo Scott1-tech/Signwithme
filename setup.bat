@@ -76,10 +76,36 @@ call npm run build
 if errorlevel 1 goto :failed
 cd ..
 
+REM --- 5. An account, if this desk will be reached from elsewhere -----------
+echo.
+echo  == Who will use this? ==
+cd backend
+.venv\Scripts\python.exe -m app.cli list-users 2>nul | findstr /c:"No accounts" >nul
+if not errorlevel 1 (
+  echo  With no account the desk runs without a login, on this machine
+  echo  only. That is the right setting if nobody else needs to open it.
+  echo.
+  set /p MAKEUSER="  Create an account so it can be opened from elsewhere? [y/N] "
+  if /i "%MAKEUSER%"=="y" (
+    echo.
+    .venv\Scripts\python.exe -m app.cli create-user
+  ) else (
+    echo  Skipped. Add one later with:
+    echo      cd backend
+    echo      .venv\Scripts\python.exe -m app.cli create-user
+  )
+) else (
+  echo  Accounts already exist. Manage them with:
+  echo      cd backend
+  echo      .venv\Scripts\python.exe -m app.cli list-users
+)
+cd ..
+
 echo.
 echo  == Setup finished ==
 echo.
 echo  Start the app by double-clicking start.bat
+echo  To open it from another device:  start-shared.bat
 echo.
 pause
 exit /b 0

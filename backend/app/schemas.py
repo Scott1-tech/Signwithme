@@ -73,6 +73,8 @@ class ApprovalOut(BaseModel):
     pages_stamped: list[int]
     signature_hash: str | None
     ip_address: str | None
+    #: The account signed in at the time, when the desk has accounts.
+    signed_in_as: str | None = None
 
 
 class ContractListItem(BaseModel):
@@ -208,6 +210,7 @@ class AuditEntry(BaseModel):
     pages_stamped: list[int]
     signature_hash: str | None
     ip_address: str | None
+    signed_in_as: str | None = None
 
 
 class AuditPage(BaseModel):
