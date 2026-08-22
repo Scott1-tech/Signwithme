@@ -16,7 +16,17 @@ that must not be broken.
 
 ## Quick start
 
-Two terminals.
+**Not a developer?** Read [`SETUP.md`](SETUP.md) instead — it covers the same
+ground in plain language, with a double-click installer.
+
+* Windows: run `setup.bat` once, then `start.bat`
+* macOS and Linux: run `./setup.sh` once, then `./start.sh`
+
+Setup generates the `SSN_SALT` for you and never overwrites one that already
+exists. `backup.sh` / `backup.bat` copy the storage directory, the database
+and that key to a drive you name.
+
+The manual equivalent, in two terminals:
 
 ```bash
 # Terminal 1 — backend

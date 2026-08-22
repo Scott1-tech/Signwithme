@@ -16,6 +16,9 @@ venv/
 .coverage
 htmlcov/
 
+# --- Runtime logs from start.sh / start.bat ---
+logs/
+
 # --- Database ---
 *.db
 *.sqlite
