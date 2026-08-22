@@ -12,7 +12,14 @@ from sqlalchemy.orm import Session
 
 from app.config import get_settings
 from app.database import get_db
-from app.models import Approval, Contract, ContractStatus, ExtractedField
+from app.models import (
+    Approval,
+    Contract,
+    ContractStatus,
+    ExtractedField,
+    SignatureAsset,
+    Template,
+)
 from app.models import Flag as FlagRow
 from app.models import Severity
 from app.schemas import (
@@ -60,6 +67,44 @@ def _placements(contract: Contract) -> list[stamp.Placement]:
         return []
 
 
+def _template_marks(contract: Contract) -> list[stamp.Mark]:
+    """The marks this contract will be stamped with, if it uses a template."""
+
+    template = contract.template
+    if template is None:
+        return []
+    return [
+        stamp.Mark(
+            kind=mark.kind,
+            page=mark.page,
+            x=mark.x,
+            y=mark.y,
+            width=mark.width,
+            height=mark.height,
+        )
+        for mark in template.marks
+        if mark.enabled
+    ]
+
+
+def _signature_file(contract: Contract):
+    """The signature image to stamp: the one chosen, else the configured one."""
+
+    asset = contract.signature_asset
+    if asset is not None:
+        path = get_settings().signatures_dir / asset.filename
+        return path if path.exists() else None
+    return config_store.signature_path()
+
+
+def _planned_pages(contract: Contract) -> list[int]:
+    """Pages that will receive a signature, however placement is decided."""
+
+    if contract.template is not None:
+        return sorted({m.page for m in _template_marks(contract) if m.kind == "signature"})
+    return [p.page for p in _placements(contract)]
+
+
 def _superseded_by(session: Session, contract: Contract) -> str | None:
     return session.scalar(
         select(Contract.id).where(Contract.supersedes_id == contract.id)
@@ -68,7 +113,7 @@ def _superseded_by(session: Session, contract: Contract) -> str | None:
 
 def to_detail(session: Session, contract: Contract) -> ContractDetail:
     approval = contract.latest_approval
-    signature_ready = config_store.signature_path() is not None
+    signature_ready = _signature_file(contract) is not None
     executed = contract.status == ContractStatus.EXECUTED
 
     return ContractDetail(
@@ -91,12 +136,33 @@ def to_detail(session: Session, contract: Contract) -> ContractDetail:
         ),
         fields=[FieldOut.model_validate(f) for f in contract.fields],
         flags=[FlagOut.model_validate(f) for f in contract.flags],
-        placements=[
-            PlacementOut(
-                page=p.page, x=p.x, y=p.y, width=p.width, height=p.height, how=p.how
-            )
-            for p in _placements(contract)
-        ],
+        template_id=contract.template_id,
+        template_name=contract.template.name if contract.template else None,
+        signature_asset_id=contract.signature_asset_id,
+        signature_name=(
+            contract.signature_asset.name if contract.signature_asset else None
+        ),
+        sign_date=contract.sign_date,
+        placements=(
+            [
+                PlacementOut(
+                    page=m.page,
+                    x=m.x,
+                    y=m.y,
+                    width=m.width,
+                    height=m.height,
+                    how="template",
+                )
+                for m in _template_marks(contract)
+            ]
+            if contract.template is not None
+            else [
+                PlacementOut(
+                    page=p.page, x=p.x, y=p.y, width=p.width, height=p.height, how=p.how
+                )
+                for p in _placements(contract)
+            ]
+        ),
         can_approve=contract.status
         not in (
             ContractStatus.EXECUTED,
@@ -128,6 +194,47 @@ def _read_upload(upload: UploadFile) -> bytes:
     return data
 
 
+def _require_template(session: Session, template_id: str | None) -> Template | None:
+    if not template_id:
+        return None
+    template = session.get(Template, template_id)
+    if template is None:
+        raise HTTPException(status_code=400, detail="That template no longer exists.")
+    if not [m for m in template.marks if m.enabled]:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Template “{template.name}” has nothing switched on to "
+            "stamp. Open it and enable at least one signature or date.",
+        )
+    return template
+
+
+def _require_signature(
+    session: Session, signature_id: str | None
+) -> SignatureAsset | None:
+    if not signature_id:
+        return None
+    asset = session.get(SignatureAsset, signature_id)
+    if asset is None:
+        raise HTTPException(status_code=400, detail="That signature no longer exists.")
+    return asset
+
+
+def _parse_sign_date(value: str | None) -> dt.date | None:
+    """Accept the ISO date an HTML date input sends."""
+
+    if not value or not value.strip():
+        return None
+    try:
+        return dt.date.fromisoformat(value.strip())
+    except ValueError:
+        raise HTTPException(
+            status_code=400,
+            detail=f"“{value}” is not a date the app can read. Use the date "
+            "picker, or write it as YYYY-MM-DD.",
+        ) from None
+
+
 def process_upload(
     session: Session,
     *,
@@ -135,6 +242,9 @@ def process_upload(
     filename: str,
     contract_type: str,
     supersedes: Contract | None = None,
+    template_id: str | None = None,
+    signature_asset_id: str | None = None,
+    sign_date: dt.date | None = None,
 ) -> Contract:
     """Store the file, extract, validate, and persist. Synchronous by design.
 
@@ -152,6 +262,9 @@ def process_upload(
         contract_type=contract_type,
         status=ContractStatus.UPLOADED,
         supersedes_id=supersedes.id if supersedes else None,
+        template_id=template_id,
+        signature_asset_id=signature_asset_id,
+        sign_date=sign_date,
     )
     session.add(contract)
     session.flush()  # assigns the id we name the file after
@@ -235,10 +348,25 @@ def process_upload(
 def upload_contract(
     file: UploadFile = File(...),
     contract_type: str = Form(config_store.DEFAULT_CONTRACT_TYPE),
+    template_id: str | None = Form(None),
+    signature_id: str | None = Form(None),
+    sign_date: str | None = Form(None),
     session: Session = Depends(get_db),
 ) -> ContractDetail:
+    """Upload a contract, choosing how it will be signed.
+
+    The reviewer picks a template — a contract already signed correctly,
+    whose signature and date positions get copied — plus which signature to
+    stamp and which date to write. All three are optional here so an upload
+    can still be reviewed before those decisions are made.
+    """
+
     data = _read_upload(file)
     digest = hash_bytes(data)
+
+    template = _require_template(session, template_id)
+    signature = _require_signature(session, signature_id)
+    chosen_date = _parse_sign_date(sign_date)
 
     existing = session.scalar(
         select(Contract).where(Contract.file_hash == digest).limit(1)
@@ -259,6 +387,9 @@ def upload_contract(
         data=data,
         filename=file.filename or "contract.pdf",
         contract_type=contract_type,
+        template_id=template.id if template else None,
+        signature_asset_id=signature.id if signature else None,
+        sign_date=chosen_date,
     )
     return to_detail(session, contract)
 
@@ -307,6 +438,11 @@ def list_contracts(
                 page_count=c.page_count,
                 error_count=c.error_count,
                 warning_count=c.warning_count,
+                template_name=c.template.name if c.template else None,
+                signature_name=(
+                    c.signature_asset.name if c.signature_asset else None
+                ),
+                sign_date=c.sign_date,
                 created_at=c.created_at,
                 updated_at=c.updated_at,
             )
@@ -473,8 +609,7 @@ def approve(
             "continue.",
         )
 
-    signature = config_store.signature_path()
-    placements = _placements(contract)
+    signature = _signature_file(contract)
 
     approval = audit_service.record_approval(
         session,
@@ -483,7 +618,7 @@ def approve(
         error_count=error_count,
         overridden=bool(error_count),
         # Resolved now so the record states exactly what was authorised.
-        pages_stamped=[p.page for p in placements],
+        pages_stamped=_planned_pages(contract),
         signature_hash=hash_file(signature) if signature else None,
         ip_address=request.client.host if request.client else None,
     )
@@ -521,48 +656,79 @@ def execute(contract_id: str, session: Session = Depends(get_db)) -> ContractDet
             "authorise the signature before it can be stamped.",
         )
 
-    signature = config_store.signature_path()
+    signature = _signature_file(contract)
     if signature is None:
         raise HTTPException(
             status_code=400,
-            detail="No signature image is configured. Upload one on the "
-            "settings screen before executing.",
+            detail="No signature image is chosen. Pick one from the signature "
+            "library, or upload one on the settings screen.",
         )
 
     source = files.absolute(contract.stored_path)
     if not source.exists():
         raise HTTPException(status_code=404, detail="The stored PDF is missing.")
 
-    placements = _placements(contract)
-    if not placements:
-        raise HTTPException(
-            status_code=400,
-            detail="Could not work out where to place the signature. Check "
-            "the anchor phrase or switch to offset mode on the settings "
-            "screen.",
-        )
-
-    authorised_pages = sorted(approval.pages_stamped or [])
-    if authorised_pages and authorised_pages != sorted(p.page for p in placements):
-        raise HTTPException(
-            status_code=409,
-            detail="The signature placement has changed since this contract "
-            "was approved. Approve again so the record matches what gets "
-            "stamped.",
-        )
-
     carrier = config_store.load_carrier()
     destination = files.executed_path(contract.id, contract.original_filename)
+    template = contract.template
 
-    result = stamp.apply(
-        source,
-        destination,
-        signature_png=signature,
-        placements=placements,
-        config=carrier.placement_for(contract.contract_type),
-        signed_on=approval.approved_at.date(),
-        carrier_fills=carrier.acroform_fills,
-    )
+    if template is not None:
+        # Copy the placement from the completed contract this was matched to.
+        marks = _template_marks(contract)
+        if not marks:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Template “{template.name}” has nothing switched on "
+                "to stamp.",
+            )
+
+        planned = sorted({m.page for m in marks if m.kind == "signature"})
+        authorised_pages = sorted(approval.pages_stamped or [])
+        if authorised_pages and authorised_pages != planned:
+            raise HTTPException(
+                status_code=409,
+                detail="The template has changed since this contract was "
+                "approved. Approve again so the record matches what gets "
+                "stamped.",
+            )
+
+        result = stamp.apply_marks(
+            source,
+            destination,
+            signature_png=signature,
+            marks=marks,
+            sign_date=contract.sign_date or approval.approved_at.date(),
+            source_page_size=(template.page_width, template.page_height),
+            carrier_fills=carrier.acroform_fills,
+        )
+    else:
+        placements = _placements(contract)
+        if not placements:
+            raise HTTPException(
+                status_code=400,
+                detail="Could not work out where to place the signature. "
+                "Choose a template, or set the anchor phrase on the settings "
+                "screen.",
+            )
+
+        authorised_pages = sorted(approval.pages_stamped or [])
+        if authorised_pages and authorised_pages != sorted(p.page for p in placements):
+            raise HTTPException(
+                status_code=409,
+                detail="The signature placement has changed since this "
+                "contract was approved. Approve again so the record matches "
+                "what gets stamped.",
+            )
+
+        result = stamp.apply(
+            source,
+            destination,
+            signature_png=signature,
+            placements=placements,
+            config=carrier.placement_for(contract.contract_type),
+            signed_on=contract.sign_date or approval.approved_at.date(),
+            carrier_fills=carrier.acroform_fills,
+        )
 
     contract.executed_path = files.relative(result.output_path)
     contract.status = ContractStatus.EXECUTED

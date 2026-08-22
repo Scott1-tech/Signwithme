@@ -13,7 +13,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import RedirectResponse
 
-from app.api import audit, config_routes, contracts
+from app.api import audit, config_routes, contracts, signatures, templates
 from app.config import get_settings
 from app.database import create_all
 
@@ -55,6 +55,8 @@ def create_app() -> FastAPI:
     app.include_router(contracts.router, prefix="/api")
     app.include_router(config_routes.router, prefix="/api")
     app.include_router(audit.router, prefix="/api")
+    app.include_router(templates.router, prefix="/api")
+    app.include_router(signatures.router, prefix="/api")
 
     @app.get("/api/health", tags=["health"])
     def health() -> dict[str, str]:

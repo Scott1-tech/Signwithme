@@ -468,7 +468,7 @@ def test_execute_without_a_signature_configured_returns_400(
     response = client.post(f"/api/contracts/{contract['id']}/execute")
 
     assert response.status_code == 400
-    assert "No signature image is configured" in response.json()["detail"]
+    assert "No signature image is chosen" in response.json()["detail"]
 
 
 def test_execute_stamps_and_marks_the_contract_executed(

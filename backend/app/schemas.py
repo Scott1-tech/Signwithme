@@ -8,6 +8,8 @@ from __future__ import annotations
 
 import datetime as dt
 
+from typing import Literal
+
 from pydantic import BaseModel, ConfigDict, Field
 
 from app.services.config_store import CarrierConfig, FieldMap, FieldSpec, SignatureConfig
@@ -81,6 +83,9 @@ class ContractListItem(BaseModel):
     page_count: int
     error_count: int
     warning_count: int
+    template_name: str | None = None
+    signature_name: str | None = None
+    sign_date: dt.date | None = None
     created_at: dt.datetime
     updated_at: dt.datetime
 
@@ -96,6 +101,13 @@ class ContractDetail(BaseModel):
     supersedes_id: str | None
     superseded_by_id: str | None = None
     ssn_masked: str | None
+
+    # What the reviewer chose at upload time.
+    template_id: str | None = None
+    template_name: str | None = None
+    signature_asset_id: str | None = None
+    signature_name: str | None = None
+    sign_date: dt.date | None = None
     created_at: dt.datetime
     updated_at: dt.datetime
 
@@ -203,3 +215,94 @@ class AuditPage(BaseModel):
     total: int
     page: int
     page_size: int
+
+
+# --------------------------------------------------------------------------
+# Signature library
+# --------------------------------------------------------------------------
+
+
+class SignatureAssetOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: str
+    name: str
+    file_hash: str
+    is_default: bool
+    created_at: dt.datetime
+
+
+class SignatureRename(BaseModel):
+    name: str = Field(min_length=1, max_length=128)
+
+
+# --------------------------------------------------------------------------
+# Placement templates
+# --------------------------------------------------------------------------
+
+
+class TemplateMarkOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: str
+    kind: str
+    page: int
+    x: float
+    y: float
+    width: float
+    height: float
+    detected_as: str
+    sample_text: str
+    enabled: bool
+
+
+class TemplateMarkIn(BaseModel):
+    """A mark as edited by the reviewer. Without an id it is a new one."""
+
+    id: str | None = None
+    kind: Literal["signature", "date"]
+    page: int = Field(ge=1)
+    x: float
+    y: float
+    width: float = Field(gt=0)
+    height: float = Field(gt=0)
+    sample_text: str = ""
+    enabled: bool = True
+
+
+class TemplateOut(BaseModel):
+    id: str
+    name: str
+    description: str
+    source_filename: str
+    page_count: int
+    page_width: float
+    page_height: float
+    created_at: dt.datetime
+    updated_at: dt.datetime
+    marks: list[TemplateMarkOut]
+    signature_count: int
+    date_count: int
+    pages_marked: list[int]
+    #: False when nothing is enabled, so the UI can say a template is not
+    #: usable yet rather than failing at stamping time.
+    ready: bool
+
+
+class TemplateUpdate(BaseModel):
+    name: str | None = Field(default=None, min_length=1, max_length=128)
+    description: str | None = None
+    marks: list[TemplateMarkIn] | None = None
+
+
+class TemplateListItem(BaseModel):
+    id: str
+    name: str
+    description: str
+    source_filename: str
+    page_count: int
+    signature_count: int
+    date_count: int
+    pages_marked: list[int]
+    ready: bool
+    created_at: dt.datetime

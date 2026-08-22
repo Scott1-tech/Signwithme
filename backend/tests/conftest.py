@@ -239,3 +239,39 @@ def fillable_contract(tmp_path: Path) -> Path:
 @pytest.fixture
 def signature_png(tmp_path: Path) -> Path:
     return build_signature_png(tmp_path / "signature.png")
+
+
+def build_signed_contract(
+    path: Path,
+    values: dict[str, str] | None = None,
+    *,
+    signature: Path | None = None,
+    signed_on: dt.date | None = None,
+) -> Path:
+    """A contract that has already been counter-signed.
+
+    This is what a reviewer feeds the app to create a placement template:
+    a finished contract with the carrier signature and date already on it.
+    Built by running the real stamper over a flattened contract, so the
+    detector is tested against the shape of output the app itself produces.
+    """
+
+    from app.services.config_store import SignatureConfig
+    from app.services.stamp import apply, resolve_placements
+
+    source = build_flattened_contract(path.with_name(f"unsigned_{path.name}"), values)
+    image = signature or build_signature_png(path.with_name("template_signature.png"))
+
+    apply(
+        source,
+        path,
+        signature_png=image,
+        placements=resolve_placements(source, SignatureConfig()),
+        signed_on=signed_on or TODAY,
+    )
+    return path
+
+
+@pytest.fixture
+def signed_contract(tmp_path: Path) -> Path:
+    return build_signed_contract(tmp_path / "signed.pdf")

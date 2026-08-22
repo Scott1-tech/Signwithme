@@ -73,6 +73,12 @@ class Settings(BaseSettings):
         return self.storage_root / "config"
 
     @property
+    def templates_dir(self) -> Path:
+        """Source PDFs for placement templates: completed, signed contracts."""
+
+        return self.storage_root / "templates"
+
+    @property
     def max_upload_bytes(self) -> int:
         return self.max_upload_mb * 1024 * 1024
 
@@ -82,6 +88,7 @@ class Settings(BaseSettings):
             self.executed_dir,
             self.signatures_dir,
             self.config_dir,
+            self.templates_dir,
         ):
             directory.mkdir(parents=True, exist_ok=True)
 
