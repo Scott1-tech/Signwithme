@@ -8,6 +8,11 @@
 
 import type {
   ApproveBody,
+  SignatureAsset,
+  Template,
+  TemplateListItem,
+  TemplateUpdate,
+  UploadOptions,
   AuditPage,
   CarrierConfig,
   ContractDetail,
@@ -126,10 +131,14 @@ export const contractsApi = {
   upload(
     file: File,
     onProgress?: (percent: number) => void,
+    options: UploadOptions = {},
   ): Promise<ContractDetail> {
     return new Promise((resolve, reject) => {
       const body = new FormData();
       body.append("file", file);
+      if (options.templateId) body.append("template_id", options.templateId);
+      if (options.signatureId) body.append("signature_id", options.signatureId);
+      if (options.signDate) body.append("sign_date", options.signDate);
 
       const xhr = new XMLHttpRequest();
       xhr.open("POST", `${API_BASE}/contracts`);
@@ -314,6 +323,85 @@ export const auditApi = {
 
   exportUrl(): string {
     return `${API_BASE}/audit/export`;
+  },
+};
+
+/* --- Signature library --- */
+
+export const signaturesApi = {
+  list(): Promise<SignatureAsset[]> {
+    return request<SignatureAsset[]>("/signatures");
+  },
+
+  create(file: File, name: string): Promise<SignatureAsset> {
+    const body = new FormData();
+    body.append("file", file);
+    body.append("name", name);
+    return request<SignatureAsset>("/signatures", { method: "POST", body });
+  },
+
+  imageUrl(id: string): string {
+    return `${API_BASE}/signatures/${id}/image`;
+  },
+
+  rename(id: string, name: string): Promise<SignatureAsset> {
+    return request<SignatureAsset>(`/signatures/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name }),
+    });
+  },
+
+  makeDefault(id: string): Promise<SignatureAsset> {
+    return request<SignatureAsset>(`/signatures/${id}/default`, {
+      method: "POST",
+    });
+  },
+
+  remove(id: string): Promise<void> {
+    return request<void>(`/signatures/${id}`, { method: "DELETE" });
+  },
+};
+
+/* --- Placement templates --- */
+
+export const templatesApi = {
+  list(): Promise<TemplateListItem[]> {
+    return request<TemplateListItem[]>("/templates");
+  },
+
+  get(id: string): Promise<Template> {
+    return request<Template>(`/templates/${id}`);
+  },
+
+  create(
+    file: File,
+    name: string,
+    description = "",
+    datesBesideSignatures = true,
+  ): Promise<Template> {
+    const body = new FormData();
+    body.append("file", file);
+    body.append("name", name);
+    body.append("description", description);
+    body.append("dates_beside_signatures", String(datesBesideSignatures));
+    return request<Template>("/templates", { method: "POST", body });
+  },
+
+  update(id: string, patch: TemplateUpdate): Promise<Template> {
+    return request<Template>(`/templates/${id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(patch),
+    });
+  },
+
+  previewUrl(id: string, page: number, marks = true): string {
+    return `${API_BASE}/templates/${id}/preview/${page}?marks=${marks}`;
+  },
+
+  remove(id: string): Promise<void> {
+    return request<void>(`/templates/${id}`, { method: "DELETE" });
   },
 };
 

@@ -157,3 +157,41 @@ It checks paperwork completeness. It does not replace a compliance review, an
 MVR check, a PSP report, or a drug and alcohol query. It never contacts the
 driver, never edits driver-attested content, and uses no AI or LLM anywhere
 in the decision path.
+
+## Templates: placement learned from a completed contract
+
+Describing signature coordinates by hand is the slowest part of setting this
+up, and it has to be redone whenever a contract is revised. So the app learns
+instead: the reviewer uploads one contract that was already signed correctly,
+and `services/templates.py` reports what is on it and where.
+
+| Piece | What it does |
+| --- | --- |
+| `services/templates.py` | Finds signature images and dates, with positions |
+| `stamp.apply_marks()` | Stamps at those exact rectangles, scaling if the page size differs |
+| `api/templates.py` | Create, review, correct, preview, delete |
+| `api/signatures.py` | The signature library |
+
+### Why dates are treated carefully
+
+A driver contract is full of dates that belong to the driver: date of birth,
+licence issue and expiry, employment spans. Stamping the carrier's date over
+any of those would alter what the driver attested to, which the app must
+never do.
+
+So a date only becomes a mark when it sits inside a **signature's own band** —
+the vertical strip the signature occupies, reaching a little left and some way
+right. That is where a counter-signature date goes, and nothing else on the
+page qualifies. `dates_beside_signatures=False` lifts the restriction for a
+form where the date is printed somewhere unusual, and the reviewer picks the
+right one by hand.
+
+### Detection is reported, never assumed
+
+Marks come back for the reviewer to confirm. Each can be switched off, and
+new ones can be placed by hand. A template with nothing enabled cannot be
+chosen at upload — it fails at the point of choosing, with an explanation,
+rather than silently stamping nothing.
+
+Templates and signatures that have been used on a contract cannot be deleted.
+They are part of the record of how that contract came to be signed.

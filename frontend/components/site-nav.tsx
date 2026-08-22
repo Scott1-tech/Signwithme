@@ -7,7 +7,10 @@ import { ThemeToggle } from "@/components/theme-toggle";
 import { cn } from "@/lib/utils";
 
 const LINKS = [
-  { href: "/", label: "Queue" },
+  { href: "/", label: "Upload" },
+  { href: "/templates", label: "Templates" },
+  { href: "/signatures", label: "Signatures" },
+  { href: "/completed", label: "Completed" },
   { href: "/audit", label: "Audit log" },
   { href: "/settings", label: "Settings" },
 ];

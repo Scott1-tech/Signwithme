@@ -41,6 +41,25 @@ the field map at your contract's wording (the probe tool shows you what the
 PDF actually says), upload the carrier signature PNG and check where it
 lands, and fill in the company details.
 
+## Templates: the short version
+
+The app does not need you to describe where the signature goes. Give it one
+contract you have **already signed correctly**, and it reads the positions
+off that:
+
+1. **Signatures** — save the signature images, by name. More than one person
+   can sign, so you pick whose signature to use each time.
+2. **Templates** — upload a finished, counter-signed contract. The app finds
+   the signature and the date beside it, shows you where, and you confirm.
+3. **Upload** — choose a template, a signature, and the date to write. The
+   new contract is stamped in exactly the places the finished one had them.
+4. **Completed** — every signed contract, with the template and signature
+   used, ready to download.
+
+Only dates sitting beside a signature are picked up. A contract is full of
+the driver's own dates — date of birth, licence expiry, employment spans —
+and writing over one of those would change what the driver attested to.
+
 ## How it works
 
 ```

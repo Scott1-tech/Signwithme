@@ -15,7 +15,7 @@ import { StatusBadge } from "@/components/status-badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { contractsApi } from "@/lib/api";
-import { formatDateTime } from "@/lib/format";
+import { formatDate, formatDateTime } from "@/lib/format";
 
 export function DetailScreen({ contractId }: { contractId: string }) {
   const [page, setPage] = React.useState(1);
@@ -98,6 +98,23 @@ export function DetailScreen({ contractId }: { contractId: string }) {
           <span>Uploaded {formatDateTime(contract.created_at)}</span>
           {contract.ssn_masked && <span>SSN {contract.ssn_masked}</span>}
         </p>
+
+        {(contract.template_name || contract.signature_name || contract.sign_date) && (
+          <p className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
+            <span className="font-medium text-foreground">Will be signed:</span>
+            {contract.template_name && (
+              <span>template “{contract.template_name}”</span>
+            )}
+            {contract.signature_name && (
+              <span>signature of {contract.signature_name}</span>
+            )}
+            {contract.sign_date && (
+              <span className="tabular-nums">
+                dated {formatDate(contract.sign_date)}
+              </span>
+            )}
+          </p>
+        )}
 
         {contract.supersedes_id && (
           <p className="text-xs text-muted-foreground">

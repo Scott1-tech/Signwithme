@@ -82,6 +82,8 @@ Update this section as work progresses.
 - [x] API routes
 - [x] Frontend queue and detail
 - [x] Frontend settings and audit
+- [x] Placement templates learned from completed contracts
+- [x] Signature library, and choosing template/signature/date at upload
 
 Version one is built and runs end to end: upload, extract, validate, driver
 note, approve, stamp, download, audit. 217 backend tests pass; the frontend

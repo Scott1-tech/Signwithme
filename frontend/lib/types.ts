@@ -42,7 +42,8 @@ export interface Placement {
   y: number;
   width: number;
   height: number;
-  how: "anchor" | "offset";
+  /** "template" when the position was copied from a completed contract. */
+  how: "anchor" | "offset" | "template";
 }
 
 export interface Summary {
@@ -71,6 +72,9 @@ export interface ContractListItem {
   page_count: number;
   error_count: number;
   warning_count: number;
+  template_name: string | null;
+  signature_name: string | null;
+  sign_date: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -86,6 +90,13 @@ export interface ContractDetail {
   supersedes_id: string | null;
   superseded_by_id: string | null;
   ssn_masked: string | null;
+
+  /** What the reviewer chose at upload time. */
+  template_id: string | null;
+  template_name: string | null;
+  signature_asset_id: string | null;
+  signature_name: string | null;
+  sign_date: string | null;
   created_at: string;
   updated_at: string;
   summary: Summary;
@@ -217,4 +228,91 @@ export interface DuplicateUploadDetail {
   contract_id: string;
   original_filename: string;
   status: ContractStatus;
+}
+
+/* --- Signature library --- */
+
+export interface SignatureAsset {
+  id: string;
+  name: string;
+  file_hash: string;
+  is_default: boolean;
+  created_at: string;
+}
+
+/* --- Placement templates --- */
+
+export type MarkKind = "signature" | "date";
+
+export interface TemplateMark {
+  id: string;
+  kind: MarkKind;
+  page: number;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  /** "image", "date_text", or "manual". */
+  detected_as: string;
+  /** The label printed beside the mark, so a reviewer can recognise it. */
+  sample_text: string;
+  enabled: boolean;
+}
+
+/** A mark as sent back after editing. Without an id it is a new one. */
+export interface TemplateMarkInput {
+  id?: string | null;
+  kind: MarkKind;
+  page: number;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  sample_text?: string;
+  enabled?: boolean;
+}
+
+export interface Template {
+  id: string;
+  name: string;
+  description: string;
+  source_filename: string;
+  page_count: number;
+  page_width: number;
+  page_height: number;
+  created_at: string;
+  updated_at: string;
+  marks: TemplateMark[];
+  signature_count: number;
+  date_count: number;
+  pages_marked: number[];
+  /** False when nothing is enabled, so it cannot be used to stamp yet. */
+  ready: boolean;
+}
+
+export interface TemplateListItem {
+  id: string;
+  name: string;
+  description: string;
+  source_filename: string;
+  page_count: number;
+  signature_count: number;
+  date_count: number;
+  pages_marked: number[];
+  ready: boolean;
+  created_at: string;
+}
+
+export interface TemplateUpdate {
+  name?: string;
+  description?: string;
+  marks?: TemplateMarkInput[];
+}
+
+/** What the reviewer chooses when uploading a new contract. */
+export interface UploadOptions {
+  templateId?: string;
+  signatureId?: string;
+  /** ISO date, as an HTML date input produces. */
+  signDate?: string;
 }
